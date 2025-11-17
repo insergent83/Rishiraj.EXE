@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #87CEEB;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #882f2f;
+            background: #861919;
+            display: block;
+        }
+        #gameOver {
+            display: none;
+            position: absolute;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="700" height="600"></canvas>
+    <div id="gameOver">
+        <h1>Game Over!</h1>
+        <p id="score">Score: 0</p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+    <div style = "position: absolute; top: 16px; right:  16px; z-index: 20;">
+        
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const runAudio = new Audio('running.mp3');
+            runAudio.loop = true;
+            runAudio.volume = 0.5;
+            const hitAudio = new Audio('hit.mp3');
+            hitAudio.volume = 1.0;
+            let audioStarted = false;
+
+        const bird = { x: 50, y: 150, width: 20, height: 20, velocity: 0 };
+        const gravity = 0.4;
+        const jumpPower = -8;
+        let score = 0;
+        let gameRunning = true;
+        let pipes = [];
+        const pipeWidth = 50;
+        const pipeGap = 170;
+        const pipeDistance = 350;
+
+        
+        const birdImg = new Image();
+       let birdImgLoaded = false;
+       birdImg.src = 'rishiraj.jpg';
+       birdImg.onload = () => {
+           birdImgLoaded = true;
+        
+           const maxSize = 40;
+           const scale = Math.min(maxSize / birdImg.width, maxSize / birdImg.height, 1);
+           bird.width = Math.round(birdImg.width * scale);
+           bird.height = Math.round(birdImg.height * scale);
+       };
+
+        function createPipe() {
+            const minHeight = 50;
+            const maxHeight = canvas.height - pipeGap - minHeight;
+            const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+            pipes.push({
+                x: canvas.width,
+                topHeight: topHeight,
+                scored: false
+            });
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            bird.velocity += gravity;
+            bird.y += bird.velocity;
+
+            if (bird.y + bird.height > canvas.height || bird.y < 0) {
+                endGame();
+            }
+
+            pipes.forEach((pipe, index) => {
+                pipe.x -= 5;
+
+                if (pipe.x + pipeWidth < bird.x && !pipe.scored) {
+                    score++;
+                    pipe.scored = true;
+                }
+
+                if (pipe.x + pipeWidth < 0) {
+                    pipes.splice(index, 1);
+                }
+
+                if (bird.x < pipe.x + pipeWidth && bird.x + bird.width > pipe.x) {
+                   
+                
+                if (bird.y < pipe.topHeight || bird.y + bird.height > pipe.topHeight + pipeGap) {
+
+                    try { runAudio.pause(); runAudio.currentTime = 0; } catch(e) {}
+                    try { hitAudio.currentTime = 0; hitAudio.play().catch(()=>{}); } catch(e) {}
+                    endGame();
+                    }
+                }
+            });
+
+            if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - pipeDistance) {
+                createPipe();
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (birdImgLoaded) {
+                ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+            } else {
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+            }
+
+            ctx.fillStyle = '#228B22';
+            pipes.forEach(pipe => {
+                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.topHeight);
+                ctx.fillRect(pipe.x, pipe.topHeight + pipeGap, pipeWidth, canvas.height - pipe.topHeight - pipeGap);
+            });
+
+            ctx.fillStyle = '#000';
+            ctx.font = '24px Arial';
+            ctx.fillText('Score: ' + score, 10, 30);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('score').textContent = 'Score: ' + score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (!audioStarted) { runAudio.play().catch(()=>{}); audioStarted = true; }
+                bird.velocity = jumpPower;
+            }
+        });
+
+        canvas.addEventListener('click', () => {
+            if (!audioStarted) { runAudio.play().catch(()=>{}); audioStarted = true; }
+            bird.velocity = jumpPower;
+        });
+
+        createPipe();
+        gameLoop();
+    </script>
+</body>
+</html>
